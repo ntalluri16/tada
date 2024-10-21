@@ -1,0 +1,22 @@
+SELECT 
+    COALESCE(t1.name, t2.name) AS name,
+    t1.status AS table1_status,
+    t2.status AS table2_status,
+    CASE 
+        WHEN t1.status != t2.status THEN 'Mismatch in status' 
+        ELSE 'Match'
+    END AS status_comparison,
+    -- Add more fields comparisons like this
+    CASE
+        WHEN t1.some_other_field != t2.some_other_field THEN 'Mismatch in some_other_field'
+        ELSE 'Match'
+    END AS other_field_comparison
+FROM 
+    table1 t1
+FULL OUTER JOIN 
+    table2 t2 
+ON 
+    t1.name = t2.name
+WHERE 
+    t1.status IS DISTINCT FROM t2.status
+    OR t1.some_other_field IS DISTINCT FROM t2.some_other_field; -- Add more conditions as needed
