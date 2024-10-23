@@ -4,31 +4,33 @@
 threshold=900
 start_time=$SECONDS
 
-# Directory to check for files
+# Directory and file pattern to check
 directory="/path/to/directory"
+file_pattern="your_file_pattern*"  # Replace with your actual file pattern
 
-# Your list of files to check
-files=("file1" "file2" "file3")
+# Start the loop
+while true; do
+    files=$(ls "$directory/$file_pattern" 2>/dev/null)
 
-# Loop to check for files
-for file in "${files[@]}"; do
-    while true; do
-        if [[ -f "$directory/$file" ]]; then
-            echo "$file exists, processing..."
-            # Add your processing logic here
-            break
-        else
-            # Check if threshold time has been exceeded
-            elapsed_time=$(($SECONDS - $start_time))
-            if (( elapsed_time > threshold )); then
-                echo "Threshold of 15 minutes exceeded. Exiting."
-                exit 1
-            fi
-            
-            echo "$file not found, waiting..."
-            sleep 10  # Wait for 10 seconds before retrying
+    # If no files are found
+    if [ -z "$files" ]; then
+        # Check if threshold time has been exceeded
+        elapsed_time=$(($SECONDS - $start_time))
+        if (( elapsed_time > threshold )); then
+            echo "Threshold of 15 minutes exceeded. Exiting."
+            exit 1
         fi
-    done
+        
+        echo "No files found, waiting..."
+        sleep 10  # Wait for 10 seconds before retrying
+    else
+        # Process the files if they exist
+        for file in $files; do
+            echo "Processing file: $file"
+            # Add your processing logic here
+        done
+        break  # Exit the loop once files are processed
+    fi
 done
 
 echo "All files processed successfully!"
