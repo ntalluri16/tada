@@ -1,22 +1,34 @@
-SELECT 
-    COALESCE(t1.name, t2.name) AS name,
-    t1.status AS table1_status,
-    t2.status AS table2_status,
-    CASE 
-        WHEN t1.status != t2.status THEN 'Mismatch in status' 
-        ELSE 'Match'
-    END AS status_comparison,
-    -- Add more fields comparisons like this
-    CASE
-        WHEN t1.some_other_field != t2.some_other_field THEN 'Mismatch in some_other_field'
-        ELSE 'Match'
-    END AS other_field_comparison
-FROM 
-    table1 t1
-FULL OUTER JOIN 
-    table2 t2 
-ON 
-    t1.name = t2.name
-WHERE 
-    t1.status IS DISTINCT FROM t2.status
-    OR t1.some_other_field IS DISTINCT FROM t2.some_other_field; -- Add more conditions as needed
+#!/bin/bash
+
+# Time threshold in seconds (15 minutes = 900 seconds)
+threshold=900
+start_time=$SECONDS
+
+# Directory to check for files
+directory="/path/to/directory"
+
+# Your list of files to check
+files=("file1" "file2" "file3")
+
+# Loop to check for files
+for file in "${files[@]}"; do
+    while true; do
+        if [[ -f "$directory/$file" ]]; then
+            echo "$file exists, processing..."
+            # Add your processing logic here
+            break
+        else
+            # Check if threshold time has been exceeded
+            elapsed_time=$(($SECONDS - $start_time))
+            if (( elapsed_time > threshold )); then
+                echo "Threshold of 15 minutes exceeded. Exiting."
+                exit 1
+            fi
+            
+            echo "$file not found, waiting..."
+            sleep 10  # Wait for 10 seconds before retrying
+        fi
+    done
+done
+
+echo "All files processed successfully!"
