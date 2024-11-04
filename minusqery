@@ -1,36 +1,19 @@
-#!/bin/bash
+SET SERVEROUTPUT ON;
 
-# Time threshold in seconds (15 minutes = 900 seconds)
-threshold=900
-start_time=$SECONDS
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE TADA';
+EXCEPTION
+   WHEN OTHERS THEN
+      IF SQLCODE != -942 THEN
+         RAISE;
+      END IF;
+END;
+/
 
-# Directory and file pattern to check
-directory="/path/to/directory"
-file_pattern="your_file_pattern*"  # Replace with your actual file pattern
+CREATE TABLE TADA (
+   field_name VARCHAR2(50)
+);
+/
 
-# Start the loop
-while true; do
-    files=$(ls "$directory/$file_pattern" 2>/dev/null)
-
-    # If no files are found
-    if [ -z "$files" ]; then
-        # Check if threshold time has been exceeded
-        elapsed_time=$(($SECONDS - $start_time))
-        if (( elapsed_time > threshold )); then
-            echo "Threshold of 15 minutes exceeded. Exiting."
-            exit 1
-        fi
-        
-        echo "No files found, waiting..."
-        sleep 10  # Wait for 10 seconds before retrying
-    else
-        # Process the files if they exist
-        for file in $files; do
-            echo "Processing file: $file"
-            # Add your processing logic here
-        done
-        break  # Exit the loop once files are processed
-    fi
-done
-
-echo "All files processed successfully!"
+-- To confirm successful execution
+SELECT * FROM TADA;
