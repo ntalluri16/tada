@@ -1,19 +1,17 @@
-SET SERVEROUTPUT ON;
-
+DECLARE
+   v_exists NUMBER;
 BEGIN
-   EXECUTE IMMEDIATE 'DROP TABLE TADA';
-EXCEPTION
-   WHEN OTHERS THEN
-      IF SQLCODE != -942 THEN
-         RAISE;
-      END IF;
+   SELECT COUNT(*)
+   INTO v_exists
+   FROM user_tables
+   WHERE table_name = 'TADA';
+
+   IF v_exists > 0 THEN
+      EXECUTE IMMEDIATE 'DROP TABLE TADA';
+   END IF;
 END;
 /
 
 CREATE TABLE TADA (
    field_name VARCHAR2(50)
 );
-/
-
--- To confirm successful execution
-SELECT * FROM TADA;
