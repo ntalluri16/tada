@@ -18,3 +18,40 @@ String value1 = Utils.safeGetValue(aReference, "uniqueKey1", "default1");
 String value2 = Utils.safeGetValue(aReference, "uniqueKey2", "default2");
 String value3 = Utils.safeGetValue(aReference, "uniqueKey3", "default3");
 // Repeat as needed for other values
+
+
+
+
+
+
+import java.util.Optional;
+import java.util.function.Function;
+
+public class Utils {
+
+    public static <T> T safeGetValue(
+        MyReferenceType aReference,
+        String key,
+        Function<MyValueType, T> valueExtractor,
+        T defaultValue
+    ) {
+        try {
+            return Optional.ofNullable(aReference.get(key))
+                           .map(valueExtractor)
+                           .orElse(defaultValue);
+        } catch (NullPointerException e) {
+            return defaultValue;
+        }
+    }
+}
+
+
+
+// Example usage assuming `aReference` and `MyReferenceType` are defined
+String value1 = Utils.safeGetValue(aReference, "uniqueKey1", MyValueType::getStringValue, "defaultString");
+Integer value2 = Utils.safeGetValue(aReference, "uniqueKey2", MyValueType::getIntValue, 0);
+Double value3 = Utils.safeGetValue(aReference, "uniqueKey3", MyValueType::getDoubleValue, 0.0);
+// Add more as needed
+
+
+
