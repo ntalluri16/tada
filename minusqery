@@ -54,4 +54,36 @@ Double value3 = Utils.safeGetValue(aReference, "uniqueKey3", MyValueType::getDou
 // Add more as needed
 
 
+import java.util.Optional;
+import java.util.function.Function;
+
+public class Utils {
+
+    public static <T> T safeGetValue(
+        ADReferenceType aReference,
+        Function<ADReferenceType, T> valueExtractor,
+        T defaultValue
+    ) {
+        try {
+            return Optional.ofNullable(aReference)
+                           .map(valueExtractor)
+                           .orElse(defaultValue);
+        } catch (NullPointerException e) {
+            return defaultValue;
+        }
+    }
+}
+
+
+
+ADReferenceType aReference = ...; // your reference object
+
+// Assuming `getStringField`, `getIntField`, and `getDoubleField` are methods in ADReferenceType
+String stringValue = Utils.safeGetValue(aReference, ADReferenceType::getStringField, "defaultString");
+Integer intValue = Utils.safeGetValue(aReference, ADReferenceType::getIntField, 0);
+Double doubleValue = Utils.safeGetValue(aReference, ADReferenceType::getDoubleField, 0.0);
+
+
+
+
 
