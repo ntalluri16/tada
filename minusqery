@@ -1,17 +1,20 @@
-DECLARE
-   v_exists NUMBER;
-BEGIN
-   SELECT COUNT(*)
-   INTO v_exists
-   FROM user_tables
-   WHERE table_name = 'TADA';
+import java.util.Optional;
 
-   IF v_exists > 0 THEN
-      EXECUTE IMMEDIATE 'DROP TABLE TADA';
-   END IF;
-END;
-/
+public class Utils {
 
-CREATE TABLE TADA (
-   field_name VARCHAR2(50)
-);
+    public static <T> T safeGetValue(MyReferenceType aReference, String key, T defaultValue) {
+        try {
+            return Optional.ofNullable(aReference.get(key)).map(MyValueType::getValue).orElse(defaultValue);
+        } catch (NullPointerException e) {
+            return defaultValue;
+        }
+    }
+}
+
+
+MyReferenceType aReference = ...; // your reference object
+
+String value1 = Utils.safeGetValue(aReference, "uniqueKey1", "default1");
+String value2 = Utils.safeGetValue(aReference, "uniqueKey2", "default2");
+String value3 = Utils.safeGetValue(aReference, "uniqueKey3", "default3");
+// Repeat as needed for other values
