@@ -3,11 +3,8 @@
 # Directory to poll
 polling_dir="/path/to/directory"
 
-# The base file name (without extension)
-base_name="abc"
-
-# File pattern to wait for
-ok_pattern="${polling_dir}/${base_name}.ok"
+# The base file pattern (with wildcards)
+base_pattern="RepoReport.FxMarketRates*AM1*.ok"
 
 # Timeout duration in seconds (2 minutes)
 timeout_duration=120
@@ -17,9 +14,11 @@ start_time=$(date +%s)
 
 # Poll for the .ok file until timeout or found
 while true; do
-    # Check if the .ok file exists
-    if [[ -f "$ok_pattern" ]]; then
-        echo "$ok_pattern found. Proceeding with normal logic..."
+    # Use find to check if the file exists matching the pattern
+    ok_file=$(find "$polling_dir" -maxdepth 1 -type f -name "$base_pattern")
+
+    if [[ -n "$ok_file" ]]; then
+        echo "$ok_file found. Proceeding with normal logic..."
         exit 0  # Exit normally if the file is found
     fi
 
@@ -27,7 +26,7 @@ while true; do
     current_time=$(date +%s)
     elapsed_time=$((current_time - start_time))
     if ((elapsed_time >= timeout_duration)); then
-        echo "$ok_pattern not found within 2 minutes. Exiting with error."
+        echo "$base_pattern not found within 2 minutes. Exiting with error."
         exit 1  # Exit with error if the file is not found within 2 minutes
     fi
 
