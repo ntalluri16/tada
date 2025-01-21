@@ -1,89 +1,39 @@
-import java.util.Optional;
+#!/bin/bash
 
-public class Utils {
+# Directory to poll
+polling_dir="/path/to/directory"
 
-    public static <T> T safeGetValue(MyReferenceType aReference, String key, T defaultValue) {
-        try {
-            return Optional.ofNullable(aReference.get(key)).map(MyValueType::getValue).orElse(defaultValue);
-        } catch (NullPointerException e) {
-            return defaultValue;
-        }
-    }
-}
+# The base file name (without extension)
+base_name="abc"
 
+# File pattern to wait for
+ok_pattern="${polling_dir}/${base_name}.ok"
 
-MyReferenceType aReference = ...; // your reference object
+# File pattern to process once the .ok file is found
+txt_pattern="${polling_dir}/${base_name}.txt"
 
-String value1 = Utils.safeGetValue(aReference, "uniqueKey1", "default1");
-String value2 = Utils.safeGetValue(aReference, "uniqueKey2", "default2");
-String value3 = Utils.safeGetValue(aReference, "uniqueKey3", "default3");
-// Repeat as needed for other values
-
-
-
-
-
-
-import java.util.Optional;
-import java.util.function.Function;
-
-public class Utils {
-
-    public static <T> T safeGetValue(
-        MyReferenceType aReference,
-        String key,
-        Function<MyValueType, T> valueExtractor,
-        T defaultValue
-    ) {
-        try {
-            return Optional.ofNullable(aReference.get(key))
-                           .map(valueExtractor)
-                           .orElse(defaultValue);
-        } catch (NullPointerException e) {
-            return defaultValue;
-        }
-    }
-}
-
-
-
-// Example usage assuming `aReference` and `MyReferenceType` are defined
-String value1 = Utils.safeGetValue(aReference, "uniqueKey1", MyValueType::getStringValue, "defaultString");
-Integer value2 = Utils.safeGetValue(aReference, "uniqueKey2", MyValueType::getIntValue, 0);
-Double value3 = Utils.safeGetValue(aReference, "uniqueKey3", MyValueType::getDoubleValue, 0.0);
-// Add more as needed
-
-
-import java.util.Optional;
-import java.util.function.Function;
-
-public class Utils {
-
-    public static <T> T safeGetValue(
-        ADReferenceType aReference,
-        Function<ADReferenceType, T> valueExtractor,
-        T defaultValue
-    ) {
-        try {
-            return Optional.ofNullable(aReference)
-                           .map(valueExtractor)
-                           .orElse(defaultValue);
-        } catch (NullPointerException e) {
-            return defaultValue;
-        }
-    }
-}
-
-
-
-ADReferenceType aReference = ...; // your reference object
-
-// Assuming `getStringField`, `getIntField`, and `getDoubleField` are methods in ADReferenceType
-String stringValue = Utils.safeGetValue(aReference, ADReferenceType::getStringField, "defaultString");
-Integer intValue = Utils.safeGetValue(aReference, ADReferenceType::getIntField, 0);
-Double doubleValue = Utils.safeGetValue(aReference, ADReferenceType::getDoubleField, 0.0);
-
-
-
-
-
+# Poll for the .ok file and wait for it to appear
+while true; do
+    # Check if the .ok file exists
+    if [[ -f "$ok_pattern" ]]; then
+        echo "$ok_pattern found. Processing the corresponding .txt file..."
+        
+        # Process the corresponding .txt file
+        if [[ -f "$txt_pattern" ]]; then
+            echo "Processing $txt_pattern..."
+            # Add your processing logic here (e.g., moving, reading, etc.)
+            
+            # Once processed, remove or rename the .ok file (optional)
+            rm "$ok_pattern"
+            echo "Processed and removed $ok_pattern."
+            break  # Exit the loop after processing
+        else
+            echo "$txt_pattern not found, waiting for 2 minutes before checking again."
+        fi
+    else
+        echo "$ok_pattern not found, waiting for 2 minutes..."
+    fi
+    
+    # Wait for 2 minutes before checking again
+    sleep 120
+done
