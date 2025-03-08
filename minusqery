@@ -1,8 +1,26 @@
-DO $$ 
-DECLARE 
-    out1 TEXT; 
-    out2 INT;
-BEGIN
-    CALL my_stored_procedure(123, 'test', 45.67, out1, out2);
-    RAISE NOTICE 'Output 1: %, Output 2: %', out1, out2;
-END $$;
+Query query = entityManager.createNativeQuery(
+    "DO $$ " +
+    "DECLARE out1 TEXT; " +
+    "DECLARE out2 INT; " +
+    "BEGIN " +
+    "    CALL my_stored_procedure(?, ?, ?, out1, out2); " +
+    "    SELECT out1, out2; " +  // Fetching the OUT parameter values
+    "END $$;"
+);
+
+// Set only the IN parameters (OUT parameters are handled inside the query)
+query.setParameter(1, 123);
+query.setParameter(2, "test");
+query.setParameter(3, 45.67);
+
+// Execute the query and get results
+List<Object[]> results = query.getResultList();
+
+if (!results.isEmpty()) {
+    Object[] row = results.get(0);
+    String output1 = (String) row[0];
+    Integer output2 = (Integer) row[1];
+
+    System.out.println("Output 1: " + output1);
+    System.out.println("Output 2: " + output2);
+}
