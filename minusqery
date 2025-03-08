@@ -1,25 +1,8 @@
-SELECT 
-    req_log.RULE_ID,
-    COALESCE(tc.DESC, td.DESC) AS RULE_DESCRIPTION,
-    req_log.COMPANY_CODE,
-    req_log.GAAP_CODE,
-    req_log.POSTING_AMOUNT,
-    CASE 
-        WHEN appr_log.ACTION = 'Approved' THEN 'Approved' 
-        ELSE 'Requested' 
-    END AS STATUS,
-    req_user.USER_NAME AS REQUESTER,
-    req_log.CREATED_DATE AS REQUESTED_TIME,
-    appr_user.USER_NAME AS APPROVER,
-    appr_log.CREATED_DATE AS APPROVER_TIME
-FROM OVERRIDE_LOG req_log
-LEFT JOIN OVERRIDE_LOG appr_log 
-    ON req_log.RULE_ID = appr_log.RULE_ID 
-    AND req_log.COMPANY_CODE = appr_log.COMPANY_CODE
-    AND req_log.GAAP_CODE = appr_log.GAAP_CODE
-    AND appr_log.ACTION = 'Approved'
-    AND req_log.ACTION = 'Requested'
-LEFT JOIN TABLE_C tc ON req_log.RULE_ID = tc.RULE_ID
-LEFT JOIN TABLE_D td ON req_log.RULE_ID = td.RULE_ID
-LEFT JOIN TABLE_B req_user ON req_user.T_NUMBER = req_log.CREATED_BY
-LEFT JOIN TABLE_B appr_user ON appr_user.T_NUMBER = appr_log.CREATED_BY;
+DO $$ 
+DECLARE 
+    out1 TEXT; 
+    out2 INT;
+BEGIN
+    CALL my_stored_procedure(123, 'test', 45.67, out1, out2);
+    RAISE NOTICE 'Output 1: %, Output 2: %', out1, out2;
+END $$;
