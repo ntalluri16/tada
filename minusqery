@@ -1,26 +1,36 @@
-Query query = entityManager.createNativeQuery(
-    "DO $$ " +
-    "DECLARE out1 TEXT; " +
-    "DECLARE out2 INT; " +
-    "BEGIN " +
-    "    CALL my_stored_procedure(?, ?, ?, out1, out2); " +
-    "    SELECT out1, out2; " +  // Fetching the OUT parameter values
-    "END $$;"
-);
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
+import java.math.BigDecimal;
 
-// Set only the IN parameters (OUT parameters are handled inside the query)
-query.setParameter(1, 123);
-query.setParameter(2, "test");
-query.setParameter(3, 45.67);
+public class MyRepository {
 
-// Execute the query and get results
-List<Object[]> results = query.getResultList();
+    @PersistenceContext
+    private EntityManager entityManager;
 
-if (!results.isEmpty()) {
-    Object[] row = results.get(0);
-    String output1 = (String) row[0];
-    Integer output2 = (Integer) row[1];
+    public void callGetAllProcedure(String one, String two, String three) {
+        // Use a native query to call the PostgreSQL procedure
+        String sql = "CALL getall(:one, :two, :three, :four, :five)";
+        Query query = entityManager.createNativeQuery(sql);
 
-    System.out.println("Output 1: " + output1);
-    System.out.println("Output 2: " + output2);
+        // Set the IN parameters
+        query.setParameter("one", one);
+        query.setParameter("two", two);
+        query.setParameter("three", three);
+
+        // Register the OUT parameters
+        query.registerStoredProcedureParameter("four", String.class, ParameterMode.OUT);
+        query.registerStoredProcedureParameter("five", BigDecimal.class, ParameterMode.OUT);
+
+        // Execute the procedure
+        query.execute();
+
+        // Retrieve the OUT parameters
+        String four = (String) query.getOutputParameterValue("four");
+        BigDecimal five = (BigDecimal) query.getOutputParameterValue("five");
+
+        // Do something with the output values
+        System.out.println("four: " + four);
+        System.out.println("five: " + five);
+    }
 }
