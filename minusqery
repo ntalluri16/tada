@@ -1,51 +1,45 @@
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.NamedParameterJdbcTemplate;
-import org.springframework.stereotype.Repository;
+DECLARE
+  -- Email server details
+  smtp_host       VARCHAR2(50) := 'smtp.yourserver.com';
+  smtp_port       NUMBER := 25;
+  sender_email    VARCHAR2(100) := 'sender@example.com';
+  recipient_email VARCHAR2(100) := 'recipient@example.com';
+  subject         VARCHAR2(100) := 'Employee List';
+  email_body      VARCHAR2(32767);
+  conn            UTL_SMTP.connection;
 
-import java.sql.CallableStatement;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Types;
-import java.util.HashMap;
-import java.util.Map;
+  -- Cursor for SELECT
+  CURSOR emp_cur IS
+    SELECT first_name, last_name FROM employees WHERE department_id = 10;
 
-import javax.sql.DataSource;
+  -- Temporary variable
+  v_line VARCHAR2(1000);
+BEGIN
+  -- Build the body with results
+  email_body := 'List of Employees in Dept 10:' || CHR(10);
+  FOR rec IN emp_cur LOOP
+    v_line := rec.first_name || ' ' || rec.last_name;
+    email_body := email_body || v_line || CHR(10);
+  END LOOP;
 
-@Repository
-public class StoredProcedureRepository {
+  -- Start sending email
+  conn := UTL_SMTP.open_connection(smtp_host, smtp_port);
+  UTL_SMTP.helo(conn, smtp_host);
+  UTL_SMTP.mail(conn, sender_email);
+  UTL_SMTP.rcpt(conn, recipient_email);
+  UTL_SMTP.open_data(conn);
 
-    @Autowired
-    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+  UTL_SMTP.write_data(conn, 'Subject: ' || subject || CHR(13) || CHR(10));
+  UTL_SMTP.write_data(conn, 'To: ' || recipient_email || CHR(13) || CHR(10));
+  UTL_SMTP.write_data(conn, 'From: ' || sender_email || CHR(13) || CHR(10));
+  UTL_SMTP.write_data(conn, CHR(13) || CHR(10) || email_body);
 
-    @Autowired
-    private DataSource dataSource;
+  UTL_SMTP.close_data(conn);
+  UTL_SMTP.quit(conn);
 
-    public Map<String, Object> callMyStoredProcedure(int param1, String param2, double param3) {
-        Map<String, Object> result = new HashMap<>();
+  DBMS_OUTPUT.put_line('Email sent successfully.');
 
-        try (Connection conn = dataSource.getConnection();
-             CallableStatement cs = conn.prepareCall("{CALL my_stored_procedure(?, ?, ?, ?, ?)}")) {
-
-            // Set IN parameters
-            cs.setInt(1, param1);
-            cs.setString(2, param2);
-            cs.setDouble(3, param3);
-
-            // Register OUT parameters
-            cs.registerOutParameter(4, Types.VARCHAR);
-            cs.registerOutParameter(5, Types.INTEGER);
-
-            // Execute the stored procedure
-            cs.execute();
-
-            // Retrieve OUT parameters
-            result.put("out1", cs.getString(4));
-            result.put("out2", cs.getInt(5));
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return result;
-    }
-}
+EXCEPTION
+  WHEN OTHERS THEN
+    DBMS_OUTPUT.put_line('Error: ' || SQLERRM);
+END;
