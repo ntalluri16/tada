@@ -1,28 +1,58 @@
 DECLARE
-  -- Email server details
+  -- Email and SMTP setup
   smtp_host       VARCHAR2(50) := 'smtp.yourserver.com';
   smtp_port       NUMBER := 25;
   sender_email    VARCHAR2(100) := 'sender@example.com';
   recipient_email VARCHAR2(100) := 'recipient@example.com';
-  subject         VARCHAR2(100) := 'Employee List';
-  email_body      VARCHAR2(32767);
+  subject         VARCHAR2(100) := 'Full Data Table Export';
+  email_body      CLOB := 'Table Contents:' || CHR(10);
   conn            UTL_SMTP.connection;
 
-  -- Cursor for SELECT
-  CURSOR emp_cur IS
-    SELECT first_name, last_name FROM employees WHERE department_id = 10;
-
-  -- Temporary variable
-  v_line VARCHAR2(1000);
+  -- Variables to hold data
+  v_line          VARCHAR2(4000);
 BEGIN
-  -- Build the body with results
-  email_body := 'List of Employees in Dept 10:' || CHR(10);
-  FOR rec IN emp_cur LOOP
-    v_line := rec.first_name || ' ' || rec.last_name;
-    email_body := email_body || v_line || CHR(10);
-  END LOOP;
+  -- Loop through all rows using DBMS_SQL for dynamic SELECT *
+  DECLARE
+    cur_id        INTEGER;
+    col_cnt       INTEGER;
+    desc_tab      DBMS_SQL.DESC_TAB;
+    col_val       VARCHAR2(4000);
+    v_val         VARCHAR2(4000);
+  BEGIN
+    cur_id := DBMS_SQL.open_cursor;
+    DBMS_SQL.parse(cur_id, 'SELECT * FROM data', DBMS_SQL.NATIVE);
+    DBMS_SQL.describe_columns(cur_id, col_cnt, desc_tab);
 
-  -- Start sending email
+    -- Define columns dynamically
+    FOR i IN 1 .. col_cnt LOOP
+      DBMS_SQL.define_column(cur_id, i, col_val, 4000);
+    END LOOP;
+
+    -- Execute and fetch rows
+    IF DBMS_SQL.execute(cur_id) > 0 THEN
+      NULL; -- Execution successful
+    END IF;
+
+    -- Add column headers
+    FOR i IN 1 .. col_cnt LOOP
+      email_body := email_body || desc_tab(i).col_name || CHR(9);
+    END LOOP;
+    email_body := email_body || CHR(10);
+
+    -- Loop through each row
+    WHILE DBMS_SQL.fetch_rows(cur_id) > 0 LOOP
+      v_line := '';
+      FOR i IN 1 .. col_cnt LOOP
+        DBMS_SQL.column_value(cur_id, i, col_val);
+        v_line := v_line || NVL(col_val, 'NULL') || CHR(9);
+      END LOOP;
+      email_body := email_body || v_line || CHR(10);
+    END LOOP;
+
+    DBMS_SQL.close_cursor(cur_id);
+  END;
+
+  -- Send the email
   conn := UTL_SMTP.open_connection(smtp_host, smtp_port);
   UTL_SMTP.helo(conn, smtp_host);
   UTL_SMTP.mail(conn, sender_email);
@@ -32,13 +62,17 @@ BEGIN
   UTL_SMTP.write_data(conn, 'Subject: ' || subject || CHR(13) || CHR(10));
   UTL_SMTP.write_data(conn, 'To: ' || recipient_email || CHR(13) || CHR(10));
   UTL_SMTP.write_data(conn, 'From: ' || sender_email || CHR(13) || CHR(10));
-  UTL_SMTP.write_data(conn, CHR(13) || CHR(10) || email_body);
+  UTL_SMTP.write_data(conn, CHR(13) || CHR(10)); -- Header-body separator
+
+  -- Send the actual body
+  FOR i IN 1 .. CEIL(DBMS_LOB.getlength(email_body) / 4000) LOOP
+    UTL_SMTP.write_data(conn, DBMS_LOB.SUBSTR(email_body, 4000, (i - 1) * 4000 + 1));
+  END LOOP;
 
   UTL_SMTP.close_data(conn);
   UTL_SMTP.quit(conn);
 
   DBMS_OUTPUT.put_line('Email sent successfully.');
-
 EXCEPTION
   WHEN OTHERS THEN
     DBMS_OUTPUT.put_line('Error: ' || SQLERRM);
