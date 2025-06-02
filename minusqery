@@ -1,17 +1,26 @@
 #!/bin/bash
 
-# ======== Configuration ========
+# Replace these with actual values
 ACCESS_TOKEN="YOUR_ACCESS_TOKEN"
 GROUP_ID="YOUR_GROUP_ID"
 DATASET_ID="YOUR_DATASET_ID"
-TOP=1
 
-# ======== API Request ========
-RESPONSE=$(curl -s -X GET \
+URL="https://api.powerbi.com/v1.0/myorg/groups/$GROUP_ID/datasets/$DATASET_ID/refreshes?\$top=1"
+
+echo "=== Requesting from: ==="
+echo "$URL"
+
+echo "=== Sending curl request... ==="
+
+RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}\n" -X GET \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
-  "https://api.powerbi.com/v1.0/myorg/groups/$GROUP_ID/datasets/$DATASET_ID/refreshes?\$top=$TOP")
+  "$URL")
 
-# ======== Output ========
-echo "=== Power BI Dataset Refresh Status ==="
-echo "$RESPONSE" | jq '.value[] | {status, startTime, endTime, serviceExceptionJson}'
+# Split response and HTTP status
+BODY=$(echo "$RESPONSE" | sed -n '1,/HTTP_STATUS:/p' | sed '$d')
+STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d':' -f2)
+
+echo "=== HTTP Status Code: $STATUS ==="
+echo "=== Response Body: ==="
+echo "$BODY"
