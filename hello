@@ -1,38 +1,84 @@
 #!/bin/bash
 
-# ======== CONFIGURATION ========
-ACCESS_TOKEN="YOUR_ACCESS_TOKEN"
-GROUP_ID="YOUR_GROUP_ID"
-DATASET_ID="YOUR_DATASET_ID"
-POLL_INTERVAL=15  # seconds between checks
+# ======= CONFIGURATION =======
+GROUP_ID="your-group-id"
+DATASET_ID="your-dataset-id"
+POLL_INTERVAL=15  # seconds
+TOKEN_RENEW_BUFFER=300  # renew 5 min before expiry
 
-# ======== FUNCTION TO GET STATUS ========
-get_status() {
-  RESPONSE=$(curl -s -X GET \
-    -H "Authorization: Bearer $ACCESS_TOKEN" \
-    -H "Content-Type: application/json" \
-    "https://api.powerbi.com/v1.0/myorg/groups/$GROUP_ID/datasets/$DATASET_ID/refreshes?\$top=1")
-
-  # Extract status from response
-  STATUS=$(echo "$RESPONSE" | jq -r '.value[0].status')
-  echo "$RESPONSE" > last_response.json  # Optional: log response
-  echo "$STATUS"
+# ======= TOKEN FETCH (replace with your actual logic) =======
+fetch_token() {
+  echo "🔑 Fetching new token..."
+  # Replace this with your real code to fetch token
+  # For example, if your code sets $ACCESS_TOKEN and optionally $EXPIRES_IN
+  # Set fake example values for now:
+  ACCESS_TOKEN=$(your_token_fetch_command_here)
+  EXPIRES_IN=3600  # Adjust if your logic knows expiry
+  TOKEN_TIMESTAMP=$(date +%s)
 }
 
-# ======== POLLING LOOP ========
-echo "⏳ Waiting for dataset refresh to complete..."
+# ======= TOKEN EXPIRY CHECK =======
+is_token_expired() {
+  CURRENT_TIME=$(date +%s)
+  TIME_ELAPSED=$((CURRENT_TIME - TOKEN_TIMESTAMP))
+  TIME_LEFT=$((EXPIRES_IN - TIME_ELAPSED))
+  if [[ $TIME_LEFT -le $TOKEN_RENEW_BUFFER ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+# ======= GET STATUS (no jq) =======
+get_status() {
+  RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X GET \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    "https://api.powerbi.com/v1.0/myorg/groups/$GROUP_ID/datasets/$DATASET_ID/refreshes?\$top=1")
+
+  HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d':' -f2)
+  BODY=$(echo "$RESPONSE" | sed -n '1,/HTTP_STATUS:/p' | sed '$d')
+
+  if [[ "$HTTP_STATUS" == "401" || "$HTTP_STATUS" == "403" ]]; then
+    echo "⚠️ Token invalid or expired. Refreshing token..."
+    fetch_token
+    return 1
+  fi
+
+  # Extract "status" from the response manually (basic parsing)
+  STATUS=$(echo "$BODY" | grep -o '"status"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | cut -d':' -f2 | tr -d ' "')
+
+  echo "$STATUS"
+  return 0
+}
+
+# ======= MAIN LOOP =======
+fetch_token  # Get initial token
+
+echo "⏳ Polling refresh status..."
 
 while true; do
+  if is_token_expired; then
+    echo "🔁 Token expiring soon. Refreshing..."
+    fetch_token
+  fi
+
   STATUS=$(get_status)
+  RESULT=$?
+
+  if [[ $RESULT -ne 0 ]]; then
+    echo "⚙️  Retrying after token refresh..."
+    sleep $POLL_INTERVAL
+    continue
+  fi
 
   if [[ "$STATUS" == "Completed" ]]; then
     echo "✅ Refresh completed successfully."
     exit 0
   elif [[ "$STATUS" == "Failed" ]]; then
-    echo "❌ Refresh failed. Check details in last_response.json"
+    echo "❌ Refresh failed."
     exit 1
-  elif [[ "$STATUS" == "Unknown" || "$STATUS" == "null" ]]; then
-    echo "⚠️  No recent refresh status found. Waiting..."
+  elif [[ -z "$STATUS" ]]; then
+    echo "⚠️ No status found in response. Waiting..."
   else
     echo "🔄 Current status: $STATUS"
   fi
