@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+###############################################################################
+# clone_calendars.sh – Clone multiple AutoSys calendars in one run
+#
+# Usage:
+#   ./clone_calendars.sh SRC1:DEST1 [SRC2:DEST2 ...]
+#
+# Example:
+#   ./clone_calendars.sh PAYROLL_2025:PAYROLL_2026 FINCAL_24:FISCAL_25
+#
+# Exit codes:
+#   0  – all clones succeeded
+#   1  – wrong syntax
+#   2  – at least one clone failed
+###############################################################################
+
+set -euo pipefail
+IFS=$'\n\t'
+
+# ---- helpers ---------------------------------------------------------------
+
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+
+clone_one() {
+    local src=$1 dest=$2 tmp=$(mktemp)
+
+    printf 'Cloning  %-30s  ➜  %-30s ... ' "$src" "$dest"
+
+    # 1) Export the source calendar (quietly check existence first)
+    if ! autocal -L "$src" >"$tmp" 2>/dev/null; then
+        echo "FAILED  (source calendar not found)"
+        rm -f "$tmp"
+        return 1
+    fi
+
+    # 2) Replace the header line that contains the calendar name
+    #    The header is always the first non-blank line in the export
+    #    Example header:  calendar: SRC_CAL
+    sed -i -E "0,/^(calendar:[[:space:]]*)$src[[:space:]]*$/s//\1$dest/" "$tmp"
+
+    # 3) Import as a new calendar (-O overwrites if it already exists -- adjust!)
+    if autocal -I "$tmp" >/dev/null 2>&1; then
+        echo "OK"
+        rm -f "$tmp"
+        return 0
+    else
+        echo "FAILED  (import error)"
+        rm -f "$tmp"
+        return 1
+    fi
+}
+
+# ---- main ------------------------------------------------------------------
+
+[[ $# -eq 0 ]] && die "No calendar pairs supplied. Syntax: SRC1:DEST1 [SRC2:DEST2 ...]"
+
+overall_status=0
+for pair in "$@"; do
+    # Validate argument format SRC:DEST
+    [[ "$pair" =~ ^[^:]+:[^:]+$ ]] || die "Bad pair '$pair'. Use SRC:DEST."
+
+    src=${pair%%:*}
+    dest=${pair##*:}
+
+    # Prevent accidental self-cloning
+    [[ "$src" != "$dest" ]] || die "Source and destination cannot be identical ($src)."
+
+    # Perform the clone
+    if ! clone_one "$src" "$dest"; then
+        overall_status=2
+    fi
+done
+
+exit $overall_status
