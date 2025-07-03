@@ -1,0 +1,11 @@
+ autorep -J GF_4019% | grep -E '^Job Name' | awk '{print $3}' > jobs_to_delete.txt
+
+
+   awk '{print "delete job: "$1}' jobs_to_delete.txt > delete_jobs.jil
+
+   
+jil < delete_jobs.jil
+
+
+
+
