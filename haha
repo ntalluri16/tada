@@ -11,4 +11,9 @@ jil < delete_jobs.jil
 sed '/application:.*/a\'"$'\n' yourfile.txt > newfile.txt
 
 
+find . -type f -exec sed -i '1i\
+' {} +
+
+find . -type f -name "*.txt" -exec sed -i '1i\
+' {} +
 
