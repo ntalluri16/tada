@@ -8,4 +8,7 @@ jil < delete_jobs.jil
 
 
 
+sed '/application:.*/a\'"$'\n' yourfile.txt > newfile.txt
+
+
 
