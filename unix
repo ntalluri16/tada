@@ -1,1 +1,16 @@
 read json && echo "$json" | sed -n 's/.*"access_token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
+
+
+
+WITH value_list AS (
+    SELECT REGEXP_SUBSTR(
+        'val1,val2,val3,val4,...,val60', '[^,]+', 1, LEVEL
+    ) AS field_7
+    FROM dual
+    CONNECT BY LEVEL <= REGEXP_COUNT('val1,val2,val3,val4,...,val60', ',') + 1
+)
+INSERT INTO sc_con (field_1, field_2, field_3, field_4, field_5, field_6, field_7)
+SELECT
+    'ABC', 'DEF', 'GHI', 'JKL', 'MNO', 'PQR', field_7
+FROM value_list;
+
