@@ -14,3 +14,11 @@ SELECT
     'ABC', 'DEF', 'GHI', 'JKL', 'MNO', 'PQR', field_7
 FROM value_list;
 
+
+
+SELECT some_val
+FROM (
+    SELECT some_val, DENSE_RANK() OVER (ORDER BY some_val DESC) AS rnk
+    FROM period_table
+)
+WHERE rnk = 2;
