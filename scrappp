@@ -1,0 +1,17 @@
+BEGIN
+  MERGE INTO z_account t
+  USING z_account_stage s
+  ON (t.account_number = s.account_number)
+  WHEN MATCHED THEN
+    UPDATE SET
+      t.short_description  = s.short_description,
+      t.long_description   = s.long_description,
+      t.random_field       = s.random_field
+    WHERE t.short_description != s.short_description
+       OR t.long_description != s.long_description
+       OR t.random_field != s.random_field
+  WHEN NOT MATCHED THEN
+    INSERT (account_number, short_description, long_description, random_field)
+    VALUES (s.account_number, s.short_description, s.long_description, s.random_field);
+END;
+/
