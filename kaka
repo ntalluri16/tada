@@ -1,0 +1,36 @@
+DECLARE
+  given_date DATE := TO_DATE('2025-07-18', 'YYYY-MM-DD');  -- Replace with actual input
+BEGIN
+  MERGE INTO z_account t
+  USING (
+    SELECT 
+      LPAD(s.account_number, 10, '0') AS account_number,
+      s.short_description,
+      SUBSTR(s.long_description, 1, 20) AS long_description,
+      s.random_field
+    FROM z_account_stage s
+    WHERE s.active = 'Y'
+      AND given_date BETWEEN s.start_date AND s.end_date
+      AND s.row_id = (
+        SELECT MIN(s1.row_id)
+        FROM z_account_stage s1
+        WHERE s1.account_number = s.account_number
+          AND s1.start_date = s.start_date
+          AND s1.active = 'Y'
+          AND given_date BETWEEN s1.start_date AND s1.end_date
+      )
+  ) src
+  ON (t.account_number = src.account_number)
+  WHEN MATCHED THEN
+    UPDATE SET
+      t.short_description = src.short_description,
+      t.long_description  = src.long_description,
+      t.random_field      = src.random_field
+    WHERE t.short_description != src.short_description
+       OR t.long_description != src.long_description
+       OR t.random_field != src.random_field
+  WHEN NOT MATCHED THEN
+    INSERT (account_number, short_description, long_description, random_field)
+    VALUES (src.account_number, src.short_description, src.long_description, src.random_field);
+END;
+/
