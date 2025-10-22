@@ -1,0 +1,11 @@
+DECLARE
+  TYPE numlist IS TABLE OF NUMBER;
+  v_ids numlist := numlist(1,2,3,...,2500);
+BEGIN
+  FOR rec IN (
+    SELECT * FROM employees
+    WHERE emp_id MEMBER OF v_ids
+  ) LOOP
+    DBMS_OUTPUT.PUT_LINE(rec.name);
+  END LOOP;
+END;
