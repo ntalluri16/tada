@@ -1,40 +1,46 @@
-read json && echo "$json" | sed -n 's/.*"access_token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
+import java.io.IOException;
+import java.nio.file.*;
+import java.nio.file.attribute.*;
+import java.util.Set;
+import java.util.stream.Stream;
 
+public class FileInfo {
 
+    public static void main(String[] args) throws IOException {
+        Path path = Path.of("example.txt");
 
-WITH value_list AS (
-    SELECT REGEXP_SUBSTR(
-        'val1,val2,val3,val4,...,val60', '[^,]+', 1, LEVEL
-    ) AS field_7
-    FROM dual
-    CONNECT BY LEVEL <= REGEXP_COUNT('val1,val2,val3,val4,...,val60', ',') + 1
-)
-INSERT INTO sc_con (field_1, field_2, field_3, field_4, field_5, field_6, field_7)
-SELECT
-    'ABC', 'DEF', 'GHI', 'JKL', 'MNO', 'PQR', field_7
-FROM value_list;
+        printPermissions(path);
+        printTopLines(path, 20);
+    }
 
+    static void printPermissions(Path path) throws IOException {
+        System.out.println("=== File Permissions ===");
 
+        FileStore store = Files.getFileStore(path);
+        boolean posixSupported = store.supportsFileAttributeView(PosixFileAttributeView.class);
 
-SELECT some_val
-FROM (
-    SELECT some_val, DENSE_RANK() OVER (ORDER BY some_val DESC) AS rnk
-    FROM period_table
-)
-WHERE rnk = 2;
+        if (posixSupported) {
+            PosixFileAttributes attrs = Files.readAttributes(path, PosixFileAttributes.class);
+            Set<PosixFilePermission> perms = attrs.permissions();
 
+            System.out.println("POSIX: " + PosixFilePermissions.toString(perms));
+            System.out.println("Owner: " + attrs.owner().getName());
+            System.out.println("Group: " + attrs.group().getName());
+        } else {
+            System.out.println("Readable: " + Files.isReadable(path));
+            System.out.println("Writable: " + Files.isWritable(path));
+            System.out.println("Executable: " + Files.isExecutable(path));
+        }
 
+        System.out.println("Size: " + Files.size(path) + " bytes");
+        System.out.println("Last modified: " + Files.getLastModifiedTime(path));
+    }
 
+    static void printTopLines(Path path, int maxLines) throws IOException {
+        System.out.println("\n=== First " + maxLines + " lines ===");
 
-url_encode() {
-    typeset string="$1"
-    typeset i c encoded=""
-    for ((i=0; i<${#string}; i++)); do
-        c="${string:$i:1}"
-        case "$c" in
-            [a-zA-Z0-9.~_-]) encoded+="$c" ;;
-            *) printf -v hex '%%%02X' "'$c"; encoded+="$hex" ;;
-        esac
-    done
-    echo "$encoded"
+        try (Stream<String> lines = Files.lines(path)) {
+            lines.limit(maxLines).forEach(System.out::println);
+        }
+    }
 }
