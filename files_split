@@ -1,0 +1,8 @@
+header=$(head -n 1 bigfile.csv)
+
+tail -n +2 bigfile.csv | split -l 500000 - part_
+
+for f in part_*; do
+    { echo "$header"; cat "$f"; } > "$f.csv"
+    rm "$f"
+done
